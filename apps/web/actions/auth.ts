@@ -1,30 +1,26 @@
-import { User } from "@/types";
+import { User, UserResponse } from "@/types";
 import { fetchWithoutAuth } from "@/utils/api";
 import { getSanitizedRedirectPath } from "@/utils/url";
 import { toast } from "@repo/ui/components";
 import { clearUserFromLocalStorage } from "./auth-check";
 
-export async function login(
-    email: string,
-    password: string,
-    redirectTo = "/dashboard"
-): Promise<User> {
+export async function login(email: string, password: string, redirectTo = "/dashboard"): Promise<User> {
     const data = (await fetchWithoutAuth("/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: email, password }),
         credentials: "include"
-    })) as { user?: User };
+    })) as UserResponse;
 
-    if (!data.user?.id) {
+    if (!data.id) {
         throw new Error("Invalid credentials");
     }
 
-    localStorage.setItem("user", JSON.stringify(data.user));
+    localStorage.setItem("user", JSON.stringify(data));
     toast.success("Logged in successfully");
     const destination = getSanitizedRedirectPath(redirectTo);
     window?.location?.replace?.(destination === "/" ? "/dashboard" : destination);
-    return data.user;
+    return data;
 }
 
 export interface SignupPayload {

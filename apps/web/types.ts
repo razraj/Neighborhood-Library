@@ -11,12 +11,10 @@ export interface User {
     updatedAt?: string;
 }
 
-export const UserResponseDefault = {
-    users: [] as User[],
-    total: 0,
-    message: ""
-};
-export type UserResponse = typeof UserResponseDefault;
+export interface UserResponse extends User {
+    total: number;
+    message: string;
+}
 
 export interface Project {
     id: string;
