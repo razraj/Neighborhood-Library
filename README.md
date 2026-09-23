@@ -97,90 +97,16 @@ yarn workspace web test:e2e   # Playwright end-to-end tests
 
 ---
 
-## Data Models & Schema
+## Dependencies & patterns
 
-The data layer in `packages/db/src/prisma/schema.prisma` models a normalized library system:
+**Prefer workspace packages** (`@repo/ui`, `@repo/db`, shared configs) before adding duplicate npm deps to individual apps.
 
-| Model            | Purpose                       | Key Fields                                                                                    |
-| ---------------- | ----------------------------- | --------------------------------------------------------------------------------------------- |
-| **`Author`**     | Book contributors             | `authorId`, `firstName`, `lastName`                                                           |
-| **`Book`**       | Cataloged titles              | `bookId`, `isbn` (unique), `title`, `publishedYear`                                           |
-| **`BookAuthor`** | M:N junction table            | `bookId`, `authorId` (Cascades on book/author deletion)                                       |
-| **`BookCopy`**   | Physical inventory copies     | `copyId`, `bookId`, `status` (`available`, `borrowed`, `lost`, `maintenance`)                 |
-| **`Member`**     | Library patrons / users       | `id`, `firstName`, `lastName`, `email` (unique), `phone`, `joinDate`, `isActive`, auth tokens |
-| **`Loan`**       | Borrowing transaction records | `loanId`, `copyId`, `memberId`, `borrowDate`, `dueDate`, `returnDate`                         |
-
----
-
-## API Endpoints
-
-### Authentication (`/auth`)
-
-- `POST /auth/login` — Authenticate member, issue httpOnly access (`auth_token`) and refresh tokens.
-- `POST /auth/signup` — Register a new member account.
-- `GET /auth/me` — Retrieve current authenticated member profile.
-- `POST /auth/logout` — Revoke active refresh token and clear auth cookies.
-- `POST /auth/refresh` — Refresh expired access token.
-- `POST /auth/forgot-password` & `POST /auth/reset-password` — Password reset workflow.
-- `POST /auth/verify-email` & `POST /auth/resend-verification` — Email verification workflows.
-
-### Books & Inventory (`/books`)
-
-- `POST /books` — Create or update a book, associate author(s), and manage inventory copy count (only available copies can be scaled down).
-- `PUT /books/:id` — Update book metadata (`title`, `isbn`, `publishedYear`).
-- `GET /books/:id/status` — Retrieve full inventory status for a book: per-copy status, active borrower info, overdue flags, and inventory summary (total / available / borrowed / lost / maintenance).
-
-### Loans & Circulation (`/loans`)
-
-- `POST /loans/borrow` — Check out an available copy to a member (`memberId`, `copyId`, `daysToBorrow`), set copy status to `borrowed`.
-- `POST /loans/return` — Mark a loan returned (`returnDate`), restore copy status to `available`.
-
-### Members / Users (`/user`)
-
-- `GET /user` — List all active members.
-- `GET /user/:userId` — Get a specific member's profile.
-- `PUT /user/:userId` — Update member profile fields (`firstName`, `lastName`, `email`, `phone`).
-- `PUT /user/:userId/password` — Change member password (requires `oldPassword` + new `password`; same-user only).
-- `GET /user/:userId/loans` — List all currently active (unreturned) loans for a member, sorted by due date.
-
----
-
-## Seed Data & Test Users
-
-The database seed (`packages/db/src/seed.ts`) is idempotent and populates sample library data:
-
-### Seed Members
-
-- **Alice Smith**: `alice.smith@example.com` (Active)
-- **Bob Jones**: `bob.jones@example.com` (Active)
-- **Charlie Brown**: `charlie.brown@example.com` (Active)
-- **Diana Prince**: `diana.prince@example.com` (Inactive)
-- **Default password**: `password123` (or `DEFAULT_PASSWORD` env var)
-
-### Seed Books & Authors
-
-- _1984_ by George Orwell (`978-0451524935`)
-- _The Hobbit_ by J.R.R. Tolkien (`978-0547928227`)
-- _Pride and Prejudice_ by Jane Austen (`978-0141439518`)
-- _Foundation_ by Isaac Asimov (`978-0553293357`)
-- _Good Omens_ by Neil Gaiman & Terry Pratchett (`978-0060853983`)
-
-### Seed Copies & Loans
-
-- Copies across all statuses: `available`, `borrowed`, `lost`, and `maintenance`.
-- Loan scenarios: Active on-time loan, active overdue loan, completed on-time return, and completed late return.
-
----
-
-## Error Handling & Prisma Codes
-
-The API maps common Prisma database errors (`PrismaClientKnownRequestError`) to clean HTTP responses:
-
-- **`P2002` (Unique Constraint Failed)**: Returned when attempting to insert a duplicate unique value (e.g. existing Member `email` or duplicate Book `isbn`).
-- **`P2025` (Record Not Found)**: Returned when updating or deleting a non-existent entity (`bookId`, `memberId`, `copyId`, `loanId`).
-- **`P2003` (Foreign Key Constraint Failed)**: Returned when referencing a non-existent parent record (e.g. loan with invalid `copyId`/`memberId`) or attempting to delete a copy with linked loan history.
-- **`P2014` (Relation Violation)**: Returned when an action would violate a required relational restriction (`onDelete: Restrict`).
-- **`P2000` (Value Too Long)**: Returned when a string input exceeds column length constraints (e.g. title exceeding `@db.VarChar(255)`).
+| Layer            | Standard libraries                                                                         |
+| ---------------- | ------------------------------------------------------------------------------------------ |
+| Web server state | `@tanstack/react-query` — hooks in `apps/web/hooks/`, keys in `apps/web/lib/query-keys.ts` |
+| Web forms        | `@tanstack/react-form-nextjs` + `@repo/ui` Field components                                |
+| Web UI           | `@repo/ui` components and styles                                                           |
+| Backend data     | `@repo/db` (backend only)                                                                  |
 
 ---
 

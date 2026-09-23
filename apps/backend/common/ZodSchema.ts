@@ -49,7 +49,7 @@ export const updateBookSchema = z.object({
 
 export const borrowBookSchema = z.object({
     memberId: z.string().min(1),
-    copyId: z.string().min(1),
+    bookId: z.string().min(1),
     daysToBorrow: z.coerce.number().int().min(1).default(14)
 });
 

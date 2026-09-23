@@ -18,14 +18,24 @@ Turborepo monorepo (yarn workspaces, Node ≥22) with two Next.js apps (`apps/we
 ## Current Codebase Snapshot
 
 - **Backend routes (today):**
-  - Auth: `/auth/login`, `/auth/signup`, `/auth/logout`, `/auth/me`, `/auth/refresh`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email`, `/auth/resend-verification`
-  - Books: `POST /books`, `PUT /books/[id]`, `GET /books/[id]/status`
-  - Loans: `POST /loans/borrow`, `POST /loans/return`
-  - Users: `GET /user`, `GET /user/[userId]`, `PUT /user/[userId]`, `PUT /user/[userId]/password`, `GET /user/[userId]/loans`
-  - Verify with: `find apps/backend/app -type f`
+    - Auth: `/auth/login`, `/auth/signup`, `/auth/logout`, `/auth/me`, `/auth/refresh`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email`, `/auth/resend-verification`
+    - Books: `POST /books`, `PUT /books/[id]`, `GET /books/[id]/status`
+    - Loans: `POST /loans/borrow`, `POST /loans/return`
+    - Users: `GET /user`, `GET /user/[userId]`, `PUT /user/[userId]`, `PUT /user/[userId]/password`, `GET /user/[userId]/loans`
+    - Verify with: `find apps/backend/app -type f`
 - **Web pages (today):** `(auth)/login`, `(auth)/signup`, `(auth)/forgot-password`, `(auth)/reset-password`, `(auth)/verify-email`, `dashboard/`, `dashboard/[weekStart]`, `projects/`, `settings/`
 - **Tests:** no vitest harness configured; `yarn test` is currently a no-op
 - **E2E:** Playwright in `apps/web/e2e/`
+
+## Error Handling & Prisma Codes
+
+The API maps common Prisma database errors (`PrismaClientKnownRequestError`) to clean HTTP responses:
+
+- **`P2002` (Unique Constraint Failed)**: Returned when attempting to insert a duplicate unique value (e.g. existing Member `email` or duplicate Book `isbn`).
+- **`P2025` (Record Not Found)**: Returned when updating or deleting a non-existent entity (`bookId`, `memberId`, `copyId`, `loanId`).
+- **`P2003` (Foreign Key Constraint Failed)**: Returned when referencing a non-existent parent record (e.g. loan with invalid `copyId`/`memberId`) or attempting to delete a copy with linked loan history.
+- **`P2014` (Relation Violation)**: Returned when an action would violate a required relational restriction (`onDelete: Restrict`).
+- **`P2000` (Value Too Long)**: Returned when a string input exceeds column length constraints (e.g. title exceeding `@db.VarChar(255)`).
 
 ## Auth Model
 
@@ -76,5 +86,6 @@ Turborepo monorepo (yarn workspaces, Node ≥22) with two Next.js apps (`apps/we
 ## Detailed Instructions
 
 For specific guidelines, see:
+
 - [Architecture & design decisions](docs/)
 - [Web app patterns](apps/web/README.md)
