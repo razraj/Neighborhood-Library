@@ -1,0 +1,119 @@
+// =============================================================================
+// Neighborhood-Library Service — Prisma schema
+// -----------------------------------------------------------------------------
+// Data model for users, projects, and logged work (timesheet entries). The connection URL is NOT declared here on purpose: it
+// is injected at runtime from `process.env.DATABASE_URL` via `prisma.config.ts`
+// (see `packages/db/prisma.config.ts`), so the schema stays environment-free.
+// =============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  // Emit the client into the package's local `generated/` dir so it can be
+  // re-exported by `@repo/db` without leaking into other workspaces.
+  output          = "../generated/client"
+  binaryTargets   = ["native"]
+  // Required so the `pg_trgm` extension below can be declared in-schema.
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  // pg_trgm powers trigram-based fuzzy text search (e.g. ILIKE / similarity on
+  // names and descriptions). The extension is enabled at the DB level here;
+  // add GIN/GiST trigram indexes per-column when a search query needs them.
+  extensions = [pg_trgm]
+}
+
+// --- ENUMS -------------------------------------------------------------------
+
+enum CopyStatus {
+  available
+  borrowed
+  lost
+  maintenance
+}
+
+// --- MODELS ------------------------------------------------------------------
+
+model Author {
+  authorId  String @id @default(dbgenerated("concat('AUT-', gen_random_uuid())")) @map("author_id")
+  firstName String @map("first_name") @db.VarChar(100)
+  lastName  String @map("last_name") @db.VarChar(100)
+
+  books BookAuthor[]
+
+  @@map("authors")
+}
+
+model Book {
+  bookId        String  @id @default(dbgenerated("concat('BK-', gen_random_uuid())")) @map("book_id")
+  isbn          String? @unique @db.VarChar(20) //International Standard Book Number
+  title         String  @db.VarChar(255)
+  publishedYear Int?    @map("published_year")
+
+  authors BookAuthor[]
+  copies  BookCopy[] //
+
+  @@map("books")
+}
+
+// Explicit junction table matching the normalized SQL database design
+model BookAuthor {
+  bookId   String @map("book_id")
+  authorId String @map("author_id")
+
+  book   Book   @relation(fields: [bookId], references: [bookId], onDelete: Cascade)
+  author Author @relation(fields: [authorId], references: [authorId], onDelete: Cascade)
+
+  @@id([bookId, authorId])
+  @@map("book_authors")
+}
+
+model Member {
+  id        String   @id @default(dbgenerated("concat('MEM-', gen_random_uuid())")) @map("id")
+  firstName String   @map("first_name") @db.VarChar(100)
+  lastName  String   @map("last_name") @db.VarChar(100)
+  email     String   @unique @db.VarChar(255)
+  phone     String?  @db.VarChar(20)
+  joinDate  DateTime @default(now()) @map("join_date") @db.Date
+  isActive  Boolean  @default(true) @map("is_active")
+  password  String?  @map("password")
+
+  refreshToken    String?   @map("refresh_token")
+  refreshTokenExp DateTime? @map("refresh_token_exp")
+  resetToken      String?   @map("reset_token")
+  resetTokenExp   DateTime? @map("reset_token_exp")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  loans Loan[]
+
+  @@map("members")
+}
+
+// A copy can only be deleted if it has no loan history and CopyStatus == 'available'.
+model BookCopy {
+  copyId String     @id @default(uuid()) @map("copy_id")
+  bookId String     @map("book_id")
+  status CopyStatus @default(available)
+
+  book  Book   @relation(fields: [bookId], references: [bookId], onDelete: Cascade)
+  loans Loan[]
+
+  @@map("book_copies")
+}
+
+model Loan {
+  loanId     String    @id @default(uuid()) @map("loan_id")
+  copyId     String    @map("copy_id")
+  memberId   String    @map("member_id")
+  borrowDate DateTime  @default(now()) @map("borrow_date") @db.Date
+  dueDate    DateTime  @map("due_date") @db.Date
+  returnDate DateTime? @map("return_date") @db.Date
+
+  copy   BookCopy @relation(fields: [copyId], references: [copyId], onDelete: Restrict)
+  member Member   @relation(fields: [memberId], references: [id], onDelete: Restrict)
+
+  @@index([memberId])
+  @@index([copyId])
+  @@map("loans")
+}
