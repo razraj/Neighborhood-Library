@@ -1,11 +1,8 @@
 import { signupRequestSchema } from "@/common/ZodSchema";
-import { sendSignupVerificationEmail } from "@/lib/email";
+import { completeLoginForUserId } from "@/lib/auth-session";
 import prisma from "@/lib/db";
 import bcrypt from "bcryptjs";
-import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
-
-const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 
 export async function POST(request: Request) {
     try {
@@ -14,50 +11,32 @@ export async function POST(request: Request) {
         if (!parsed.success) {
             return NextResponse.json({ error: "Invalid request", details: parsed.error.flatten() }, { status: 400 });
         }
-        const { email, password, username, firstName, lastName } = parsed.data;
+        const { email, password, firstName, lastName, phone } = parsed.data;
+        const normalizedEmail = email.toLowerCase().trim();
 
-        const [emailTaken, usernameTaken] = await Promise.all([
-            prisma.member.findUnique({ where: { email }, select: { id: true } }),
-            prisma.member.findUnique({ where: { username }, select: { id: true } })
-        ]);
-        if (emailTaken) {
+        const existingMember = await prisma.member.findUnique({
+            where: { email: normalizedEmail },
+            select: { id: true }
+        });
+
+        if (existingMember) {
             return NextResponse.json({ error: "Email already registered" }, { status: 409 });
-        }
-        if (usernameTaken) {
-            return NextResponse.json({ error: "Username already taken" }, { status: 409 });
         }
 
         const hashedPassword = bcrypt.hashSync(password, 10);
-        const emailVerificationToken = randomBytes(32).toString("hex");
-        const emailVerificationExp = new Date(Date.now() + VERIFICATION_TTL_MS);
 
-        await prisma.member.create({
+        const newMember = await prisma.member.create({
             data: {
-                email,
-                username,
+                email: normalizedEmail,
                 password: hashedPassword,
-                firstName,
-                lastName,
-                emailVerificationToken,
-                emailVerificationExp
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
+                phone: phone?.trim() || null
             },
             select: { id: true }
         });
 
-        try {
-            await sendSignupVerificationEmail(email, emailVerificationToken);
-        } catch (e) {
-            console.error("Verification email failed:", e);
-            return NextResponse.json(
-                { error: "Account created but verification email could not be sent. Try resend or contact support." },
-                { status: 503 }
-            );
-        }
-
-        return NextResponse.json(
-            { message: "Check your email to verify your account before signing in.", email },
-            { status: 201 }
-        );
+        return completeLoginForUserId(newMember.id);
     } catch (error) {
         console.error("Signup error:", error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });

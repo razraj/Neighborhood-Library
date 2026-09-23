@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "./utils/auth";
 
 /**
- * Get auth_token from cookie header (value may contain "=" so we can't use split("=")[1])
- * @param cookieHeader - The cookie header to get the auth_token from
- * @returns auth_token or undefined if not found
+ * Get auth_token from cookie header (value may contain "=" so we don't use split("=")[1])
  */
 function getAuthTokenFromCookie(cookieHeader: string | null): string | undefined {
     if (!cookieHeader) return undefined;
@@ -16,84 +14,102 @@ function getAuthTokenFromCookie(cookieHeader: string | null): string | undefined
     return authCookie.slice("auth_token=".length).trim();
 }
 
-const allowedHosts = [
-    ...(process.env.NODE_ENV === "production"
-        ? ["ticktock-webapp.vercel.app", "ticktock-be.vercel.app"]
-        : ["localhost:3000", "localhost:3001"])
-];
+const configuredAllowedHosts = process.env.ALLOWED_HOSTS
+    ? process.env.ALLOWED_HOSTS.split(",").map((h) => h.trim())
+    : [
+          "localhost:3000",
+          "localhost:3001",
+          "127.0.0.1:3000",
+          "127.0.0.1:3001"
+      ];
 
-/**
- * Proxy Handler Reference
- * For implementation details and usage, refer to:
- * https://nextjs.org/docs/app/api-reference/file-conventions/proxy
- */
+function isOriginAllowed(origin: string): boolean {
+    if (!origin) return false;
+    try {
+        const parsed = new URL(origin);
+        return configuredAllowedHosts.some((host) => host === parsed.host);
+    } catch {
+        return false;
+    }
+}
+
 export default async function proxy(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
     const host = request.headers.get("host") ?? request.nextUrl.host;
-    const origin = request.headers.get("origin") ?? request.nextUrl.origin ?? "";
-    console.info("🚀 ~ proxy ~ pathname:", pathname);
-    console.log("🚀 ~ proxy ~ host:", host);
-    console.log("🚀 ~ proxy ~ origin:", origin);
+    const origin = request.headers.get("origin") ?? "";
 
-    // allowed hosts check
-    if (host && !allowedHosts.includes(host)) {
-        return NextResponse.json({ error: "Invalid host" }, { status: 401 });
+    // Host header check
+    if (host && process.env.NODE_ENV === "production" && !configuredAllowedHosts.includes(host)) {
+        return NextResponse.json({ error: "Invalid host header" }, { status: 403 });
     }
 
-    // Skip middleware for login route
+    // Handle CORS preflight
+    if (request.method === "OPTIONS") {
+        const preflightResponse = new NextResponse(null, { status: 204 });
+        if (isOriginAllowed(origin)) {
+            preflightResponse.headers.set("Access-Control-Allow-Origin", origin);
+            preflightResponse.headers.set("Access-Control-Allow-Credentials", "true");
+            preflightResponse.headers.set(
+                "Access-Control-Allow-Methods",
+                "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+            );
+            preflightResponse.headers.set(
+                "Access-Control-Allow-Headers",
+                "Content-Type, Authorization, x-user-id"
+            );
+        }
+        return preflightResponse;
+    }
+
     const publicAuthPaths = new Set([
-        "/user",
+        "/",
         "/auth/login",
         "/auth/signup",
         "/auth/verify-email",
         "/auth/resend-verification",
-        "/auth/oauth/google",
-        "/auth/oauth/apple",
         "/auth/forgot-password",
         "/auth/reset-password",
-        "/auth/refresh",
-        "/auth/logout"
+        "/auth/refresh"
     ]);
 
-    /**
-     * Include paths that are public and don't require authentication,
-     * including all routes under /webhooks/** and /queues/** so that they can be accessed by the web app or external services.
-     */
-    function isOtherPublicPath(pathname: string): boolean {
-        if (pathname === "/" || pathname === "/contact") {
-            return true;
-        }
-        // Match any path starting with /webhooks/ or /queues/
-        if (pathname.startsWith("/webhooks/") || pathname.startsWith("/queues/")) {
-            return true;
-        }
+    function isPublicPath(path: string): boolean {
+        if (publicAuthPaths.has(path)) return true;
+        if (path.startsWith("/webhooks/") || path.startsWith("/queues/")) return true;
         return false;
     }
 
-    if (publicAuthPaths.has(pathname) || isOtherPublicPath(pathname)) {
+    const allowOriginHeader = isOriginAllowed(origin) ? origin : null;
+
+    if (isPublicPath(pathname)) {
         const response = NextResponse.next();
-        response.headers.set("Access-Control-Allow-Origin", origin);
+        if (allowOriginHeader) {
+            response.headers.set("Access-Control-Allow-Origin", allowOriginHeader);
+            response.headers.set("Access-Control-Allow-Credentials", "true");
+        }
         return response;
     }
 
     const token = getAuthTokenFromCookie(request.headers.get("cookie"));
     if (!token) {
         const response = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        // response.headers.set("Access-Control-Allow-Origin", `${protocol}://${host}`);
-        response.headers.set("Access-Control-Allow-Origin", origin);
+        if (allowOriginHeader) {
+            response.headers.set("Access-Control-Allow-Origin", allowOriginHeader);
+            response.headers.set("Access-Control-Allow-Credentials", "true");
+        }
         return response;
     }
 
     const payload = await verifyToken(token);
-
     if (!payload?.sub) {
-        const response = NextResponse.json({ error: "Invalid token" }, { status: 401 });
-        response.headers.set("Access-Control-Allow-Origin", origin);
+        const response = NextResponse.json({ error: "Invalid or expired session" }, { status: 401 });
+        if (allowOriginHeader) {
+            response.headers.set("Access-Control-Allow-Origin", allowOriginHeader);
+            response.headers.set("Access-Control-Allow-Credentials", "true");
+        }
         return response;
     }
 
     const userId = payload.sub;
-
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-user-id", userId);
 
@@ -102,10 +118,15 @@ export default async function proxy(request: NextRequest) {
             headers: requestHeaders
         }
     });
-    response.headers.set("Access-Control-Allow-Origin", origin);
+
+    if (allowOriginHeader) {
+        response.headers.set("Access-Control-Allow-Origin", allowOriginHeader);
+        response.headers.set("Access-Control-Allow-Credentials", "true");
+    }
+
     return response;
 }
 
 export const config = {
-    matcher: "/:path*"
+    matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"]
 };

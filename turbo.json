@@ -7,6 +7,7 @@
         "ui": "tui",
         "inputs": [".env"],
         "passThroughEnv": [
+            "ALLOWED_HOSTS",
             "DATABASE_HOST",
             "DATABASE_URL",
             "JWT_SECRET",
@@ -24,6 +25,7 @@
             "RESEND_API_KEY"
         ],
         "env": [
+            "ALLOWED_HOSTS",
             "DATABASE_HOST",
             "DATABASE_URL",
             "JWT_SECRET",

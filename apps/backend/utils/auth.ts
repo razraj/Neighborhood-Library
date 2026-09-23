@@ -1,42 +1,24 @@
-import "dotenv/config";
-import { jwtVerify, SignJWT } from "jose";
+import { jwtVerify } from "jose";
 
-const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET);
+const jwtSecretString = process.env.JWT_SECRET || "default_jwt_secret_key_change_in_production";
+const SECRET_KEY = new TextEncoder().encode(jwtSecretString);
 
 export const backendUrl =
     process.env.NODE_ENV === "production"
         ? `https://${process.env.DATABASE_HOST?.replace(/\/$/, "")}`
         : "http://localhost:3000";
 
-/** Public web app origin for links in emails (reset password, verify email). */
+/** Public web app origin for links in emails (reset password, etc.). */
 export const webUrl =
     process.env.WEB_URL?.replace(/\/$/, "") ??
     (process.env.NODE_ENV === "production"
-        ? `https://${process.env.WEB_APP_HOST?.replace(/\/$/, "") ?? "ticktock-webapp.vercel.app"}`
+        ? `https://${process.env.WEB_APP_HOST?.replace(/\/$/, "") ?? "neighborhood-library.vercel.app"}`
         : "http://localhost:3001");
 
-export function isEmail(username: string) {
-    // Basic email regex
+export function isEmail(username: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (emailRegex.test(username)) {
-        return true;
-    }
-    return false;
+    return emailRegex.test(username);
 }
-
-export const generateToken = (
-    user: { id: string; orgId: string; role: string },
-    expiresIn: string = "15m"
-): Promise<string> => {
-    return new SignJWT({
-        role: user.role
-    })
-        .setProtectedHeader({ alg: "HS256" })
-        .setSubject(`${user.id}:${user.orgId}`)
-        .setIssuedAt()
-        .setExpirationTime(expiresIn)
-        .sign(SECRET_KEY);
-};
 
 export async function verifyToken(token: string) {
     try {

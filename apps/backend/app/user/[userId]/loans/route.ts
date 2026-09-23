@@ -40,6 +40,7 @@ export async function GET(
 
         return NextResponse.json(response);
     } catch (error) {
+        console.error("GET /user/[userId]/loans error:", error);
         return NextResponse.json({ error: "Failed to fetch active loans" }, { status: 500 });
     }
 }

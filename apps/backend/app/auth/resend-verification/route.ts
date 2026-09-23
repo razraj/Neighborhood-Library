@@ -1,10 +1,6 @@
 import { resendVerificationSchema } from "@/common/ZodSchema";
-import { sendSignupVerificationEmail } from "@/lib/email";
 import prisma from "@/lib/db";
-import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
-
-const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 
 export async function POST(request: Request) {
     try {
@@ -14,38 +10,21 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Invalid request" }, { status: 400 });
         }
         const { email } = parsed.data;
+        const normalizedEmail = email.toLowerCase().trim();
 
-        const user = await prisma.user.findUnique({
-            where: { email },
-            select: {
-                id: true,
-                emailVerified: true,
-                password: true
-            }
+        const member = await prisma.member.findUnique({
+            where: { email: normalizedEmail },
+            select: { id: true, isActive: true }
         });
 
-        if (!user?.password) {
-            return NextResponse.json({ message: "If an account exists, a verification email will be sent." });
-        }
-        if (user.emailVerified) {
-            return NextResponse.json({ message: "If an account exists, a verification email will be sent." });
-        }
-
-        const emailVerificationToken = randomBytes(32).toString("hex");
-        const emailVerificationExp = new Date(Date.now() + VERIFICATION_TTL_MS);
-        await prisma.user.update({
-            where: { id: user.id },
-            data: { emailVerificationToken, emailVerificationExp }
-        });
-
-        try {
-            await sendSignupVerificationEmail(email, emailVerificationToken);
-        } catch (e) {
-            console.error("Resend verification email failed:", e);
-            return NextResponse.json({ error: "Could not send email" }, { status: 503 });
+        if (member && !member.isActive) {
+            await prisma.member.update({
+                where: { id: member.id },
+                data: { isActive: true }
+            });
         }
 
-        return NextResponse.json({ message: "If an account exists, a verification email will be sent." });
+        return NextResponse.json({ message: "If an account exists, verification instructions have been sent." });
     } catch (error) {
         console.error("Resend verification error:", error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });

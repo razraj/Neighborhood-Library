@@ -127,7 +127,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         });
 
         return NextResponse.json(book, { status: 200 });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Book route error:", error);
 
         if (error instanceof Prisma.PrismaClientKnownRequestError) {

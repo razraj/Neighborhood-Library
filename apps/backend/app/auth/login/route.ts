@@ -1,13 +1,9 @@
 import { loginRequestSchema } from "@/common/ZodSchema";
 import { completeLoginForUserId } from "@/lib/auth-session";
 import prisma from "@/lib/db";
+import { isEmail } from "@/utils/auth";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
-
-function isEmail(username: string) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(username);
-}
 
 export async function POST(request: Request) {
     try {
@@ -19,8 +15,9 @@ export async function POST(request: Request) {
         const { username, password } = parsed.data;
 
         const emailCheck = isEmail(username);
-        const whereClause = emailCheck ? { email: username } : { id: username };
-        const user = await prisma.member.findUnique({
+        const whereClause = emailCheck ? { email: username.toLowerCase().trim() } : { id: username };
+
+        const member = await prisma.member.findUnique({
             where: whereClause,
             select: {
                 id: true,
@@ -29,17 +26,17 @@ export async function POST(request: Request) {
             }
         });
 
-        if (!user?.password || !bcrypt.compareSync(password, user.password)) {
+        if (!member?.password || !bcrypt.compareSync(password, member.password)) {
             return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
         }
-        if (!user.isActive) {
+        if (!member.isActive) {
             return NextResponse.json(
-                { error: "Email not verified", code: "EMAIL_NOT_VERIFIED" },
+                { error: "Account is inactive. Please contact the library administrator.", code: "ACCOUNT_INACTIVE" },
                 { status: 403 }
             );
         }
 
-        return completeLoginForUserId(user.id);
+        return completeLoginForUserId(member.id);
     } catch (error) {
         console.error("Login error:", error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });

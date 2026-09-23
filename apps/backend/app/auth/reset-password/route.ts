@@ -12,18 +12,18 @@ export async function POST(request: Request) {
         }
         const { token, password } = parsed.data;
 
-        const user = await prisma.user.findUnique({
+        const member = await prisma.member.findFirst({
             where: { resetToken: token.trim() },
             select: { id: true, resetTokenExp: true }
         });
 
-        if (!user?.resetTokenExp || user.resetTokenExp.getTime() < Date.now()) {
+        if (!member?.resetTokenExp || member.resetTokenExp.getTime() < Date.now()) {
             return NextResponse.json({ error: "Invalid or expired reset link. Request a new one." }, { status: 400 });
         }
 
         const hashedPassword = bcrypt.hashSync(password, 10);
-        await prisma.user.update({
-            where: { id: user.id },
+        await prisma.member.update({
+            where: { id: member.id },
             data: {
                 password: hashedPassword,
                 resetToken: null,

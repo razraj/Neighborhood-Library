@@ -11,7 +11,7 @@ export async function POST(request: Request) {
 
     try {
         if (userId) {
-            await prisma.user.update({
+            await prisma.member.updateMany({
                 where: { id: userId },
                 data: { refreshToken: null, refreshTokenExp: null }
             });

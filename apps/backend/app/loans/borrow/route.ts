@@ -1,11 +1,17 @@
 import { borrowBookSchema } from "@/common/ZodSchema";
+import { unauthorizedResponse } from "@/lib/caller";
 import prisma from "@/lib/db";
 import { NextResponse } from "next/server";
 
 // Record when a member borrows a book.
-// Caller supplies a bookId; the API picks the first available copy automatically.
+// Caller supplies a bookId; memberId is derived from the authenticated x-user-id header.
 export async function POST(request: Request): Promise<NextResponse> {
     try {
+        const xUserId = request.headers.get("x-user-id");
+        if (!xUserId) {
+            return unauthorizedResponse("Authentication required to borrow a book");
+        }
+
         const raw = await request.json();
         const parsed = borrowBookSchema.safeParse(raw);
         if (!parsed.success) {
@@ -14,7 +20,7 @@ export async function POST(request: Request): Promise<NextResponse> {
                 { status: 400 }
             );
         }
-        const { memberId, bookId, daysToBorrow } = parsed.data;
+        const { bookId, daysToBorrow } = parsed.data;
 
         // Confirm the book exists
         const book = await prisma.book.findUnique({ where: { bookId } });
@@ -38,7 +44,11 @@ export async function POST(request: Request): Promise<NextResponse> {
 
         const [loan, updatedCopy] = await prisma.$transaction([
             prisma.loan.create({
-                data: { copyId: availableCopy.copyId, memberId, dueDate }
+                data: {
+                    copyId: availableCopy.copyId,
+                    memberId: xUserId,
+                    dueDate
+                }
             }),
             prisma.bookCopy.update({
                 where: { copyId: availableCopy.copyId },
@@ -48,6 +58,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
         return NextResponse.json({ loan, updatedCopy });
     } catch (error) {
+        console.error("Borrow error:", error);
         return NextResponse.json({ error: "Checkout failed" }, { status: 500 });
     }
 }
