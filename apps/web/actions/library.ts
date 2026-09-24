@@ -3,10 +3,8 @@ import {
     BookStatusReport,
     BorrowBookInput,
     CreateBookInput,
-    Member,
     MembersResponse,
-    ReturnBookInput,
-    UpdateBookInput
+    ReturnBookInput
 } from "@/types";
 import { fetchWithAuth } from "@/utils/api";
 
@@ -20,14 +18,6 @@ export async function getBookStatusAction(bookId: string): Promise<BookStatusRep
 export async function createOrUpdateBookAction(input: CreateBookInput): Promise<{ bookId: string; title: string }> {
     return (await fetchWithAuth("/books", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input)
-    })) as { bookId: string; title: string };
-}
-
-export async function updateBookMetadataAction(bookId: string, input: UpdateBookInput): Promise<{ bookId: string; title: string }> {
-    return (await fetchWithAuth(`/books/${encodeURIComponent(bookId)}`, {
-        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input)
     })) as { bookId: string; title: string };
@@ -56,10 +46,6 @@ export async function returnBookAction(input: ReturnBookInput): Promise<{ loan: 
 
 export async function getMembersAction(): Promise<MembersResponse> {
     return (await fetchWithAuth("/user")) as MembersResponse;
-}
-
-export async function getMemberDetailsAction(userId: string): Promise<Member> {
-    return (await fetchWithAuth(`/user/${encodeURIComponent(userId)}`)) as Member;
 }
 
 export async function getMemberLoansAction(userId: string): Promise<ActiveLoan[]> {

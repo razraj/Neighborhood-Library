@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemberLoansQuery, useMembersQuery } from "@/hooks/use-library-queries";
+import { useMembersQuery, useUserLoansQuery } from "@/hooks/use-library-queries";
 import { Member } from "@/types";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -23,9 +23,8 @@ export function MembersConsole() {
     const [selectedMember, setSelectedMember] = useState<Member | null>(null);
     const [copiedId, setCopiedId] = useState<string | null>(null);
 
-    const { data: memberLoans, isLoading: loansLoading } = useMemberLoansQuery(
-        selectedMember?.id,
-        Boolean(selectedMember)
+    const { data: memberLoans, isLoading: loansLoading } = useUserLoansQuery(
+        selectedMember?.id
     );
 
     const members = membersData?.members || [];

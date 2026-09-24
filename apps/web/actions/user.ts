@@ -19,7 +19,7 @@ export const updateProfile = (
 
 export const changePassword = (
     userId: string,
-    data: { oldPassword?: string; currentPassword?: string; newPassword?: string; password?: string }
+    data: { currentPassword?: string; newPassword?: string }
 ): Promise<{ message?: string }> =>
     fetchWithAuth(`/user/${userId}/password`, {
         method: "PUT",

@@ -25,7 +25,7 @@ export function useUpdateProfile() {
 
 export function useChangePassword() {
     return useMutation({
-        mutationFn: ({ userId, data }: { userId: string; data: { currentPassword?: string; newPassword?: string; oldPassword?: string; password?: string } }) =>
+        mutationFn: ({ userId, data }: { userId: string; data: { currentPassword?: string; newPassword?: string } }) =>
             changePassword(userId, data),
     });
 }

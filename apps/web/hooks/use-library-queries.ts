@@ -2,14 +2,12 @@ import {
     borrowBookAction,
     createOrUpdateBookAction,
     getBookStatusAction,
-    getMemberDetailsAction,
     getMemberLoansAction,
     getMembersAction,
-    returnBookAction,
-    updateBookMetadataAction
+    returnBookAction
 } from "@/actions/library";
 import { queryKeys } from "@/lib/query-keys";
-import { BorrowBookInput, CreateBookInput, ReturnBookInput, UpdateBookInput, User } from "@/types";
+import { BorrowBookInput, CreateBookInput, ReturnBookInput, User } from "@/types";
 import { fetchWithAuth } from "@/utils/api";
 import { toast } from "@repo/ui/components";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -51,22 +49,6 @@ export function useMembersQuery() {
         queryKey: queryKeys.members.all,
         queryFn: getMembersAction,
         staleTime: 60 * 1000
-    });
-}
-
-export function useMemberDetailsQuery(userId: string, enabled = true) {
-    return useQuery({
-        queryKey: queryKeys.members.detail(userId),
-        queryFn: () => getMemberDetailsAction(userId),
-        enabled: enabled && !!userId
-    });
-}
-
-export function useMemberLoansQuery(userId?: string, enabled = true) {
-    return useQuery({
-        queryKey: queryKeys.members.loans(userId || ""),
-        queryFn: () => getMemberLoansAction(userId!),
-        enabled: enabled && !!userId
     });
 }
 
@@ -116,21 +98,6 @@ export function useCreateOrUpdateBookMutation() {
         },
         onError: (error: Error) => {
             toast.error(error.message || "Failed to save book");
-        }
-    });
-}
-
-export function useUpdateBookMetadataMutation() {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: ({ bookId, input }: { bookId: string; input: UpdateBookInput }) =>
-            updateBookMetadataAction(bookId, input),
-        onSuccess: (_data, variables) => {
-            toast.success("Book metadata updated!");
-            queryClient.invalidateQueries({ queryKey: queryKeys.books.status(variables.bookId) });
-        },
-        onError: (error: Error) => {
-            toast.error(error.message || "Failed to update book metadata");
         }
     });
 }

@@ -18,7 +18,7 @@ export default function Page() {
                             <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
                                 <GalleryVerticalEnd className="size-4" />
                             </div>
-                            ticktock
+                            Neighborhood-Library
                         </a>
                     </div>
                     <div className="flex flex-1 items-center justify-center">
@@ -29,7 +29,7 @@ export default function Page() {
                 </div>
                 <div className="relative hidden bg-primary text-white lg:block">
                     <div className="flex h-full flex-col items-center justify-center p-10 text-left">
-                        <h2 className="mb-4 w-full text-left text-3xl font-bold tracking-tight">ticktock</h2>
+                        <h2 className="mb-4 w-full text-left text-3xl font-bold tracking-tight">Neighborhood-Library</h2>
 
                         <p className="text-lg">
                             Build your team workspace in minutes and start tracking time with confidence.

@@ -62,12 +62,6 @@ export interface CreateBookInput {
     authorLastName?: string;
 }
 
-export interface UpdateBookInput {
-    title?: string;
-    isbn?: string;
-    publishedYear?: number;
-}
-
 export interface BorrowBookInput {
     bookId: string;
     daysToBorrow: number;
@@ -77,12 +71,4 @@ export interface ReturnBookInput {
     loanId: string;
 }
 
-export interface User {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    phone?: string | null;
-    isActive?: boolean;
-    joinDate?: string;
-}
+export type User = Member;

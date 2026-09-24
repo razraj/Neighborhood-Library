@@ -12,7 +12,5 @@ export const queryKeys = {
     },
     members: {
         all: ["members"] as const,
-        detail: (userId: string) => ["members", "detail", userId] as const,
-        loans: (userId: string) => ["members", "loans", userId] as const,
     },
 } as const;
