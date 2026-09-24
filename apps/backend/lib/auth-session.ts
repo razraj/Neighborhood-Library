@@ -30,7 +30,8 @@ export const meUserSelect = {
     phone: true,
     joinDate: true,
     isActive: true,
-    createdAt: true
+    createdAt: true,
+    refreshToken: true
 } as const;
 
 export async function generateToken(userId: string) {

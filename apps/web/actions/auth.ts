@@ -1,16 +1,16 @@
-import { User, UserResponse } from "@/types";
+import { User } from "@/types";
 import { fetchWithoutAuth } from "@/utils/api";
 import { getSanitizedRedirectPath } from "@/utils/url";
 import { toast } from "@repo/ui/components";
 import { clearUserFromLocalStorage } from "./auth-check";
 
-export async function login(email: string, password: string, redirectTo = "/dashboard"): Promise<User> {
+export async function login(usernameOrEmail: string, password: string, redirectTo = "/dashboard"): Promise<User> {
     const data = (await fetchWithoutAuth("/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: email, password }),
+        body: JSON.stringify({ username: usernameOrEmail, password }),
         credentials: "include"
-    })) as UserResponse;
+    })) as User;
 
     if (!data.id) {
         throw new Error("Invalid credentials");
@@ -26,17 +26,26 @@ export async function login(email: string, password: string, redirectTo = "/dash
 export interface SignupPayload {
     email: string;
     password: string;
-    username: string;
-    firstName?: string;
-    lastName?: string;
+    firstName: string;
+    lastName: string;
+    phone?: string;
 }
 
-export async function signup(payload: SignupPayload): Promise<{ message: string; email: string }> {
-    return (await fetchWithoutAuth("/auth/signup", {
+export async function signup(payload: SignupPayload, redirectTo = "/dashboard"): Promise<User> {
+    const data = (await fetchWithoutAuth("/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-    })) as { message: string; email: string };
+        body: JSON.stringify(payload),
+        credentials: "include"
+    })) as User;
+
+    if (data && data.id) {
+        localStorage.setItem("user", JSON.stringify(data));
+        toast.success("Account created successfully");
+        const destination = getSanitizedRedirectPath(redirectTo);
+        window?.location?.replace?.(destination === "/" ? "/dashboard" : destination);
+    }
+    return data;
 }
 
 export async function forgotPassword(email: string): Promise<{ message: string }> {
@@ -47,10 +56,6 @@ export async function forgotPassword(email: string): Promise<{ message: string }
     })) as { message: string };
 }
 
-/**
- * Log out: call logout API (clears cookies), clear localStorage, redirect to login.
- * Use this for the logout button/link.
- */
 export async function logout(): Promise<void> {
     try {
         await fetch("/api/auth/logout", {

@@ -11,13 +11,13 @@ export async function fetchSession(): Promise<User | null> {
             await clearUserFromLocalStorage();
             return null;
         }
-        const data = (await res.json()) as { user?: User };
-        if (!data.user?.id) {
+        const data = (await res.json()) as User;
+        if (!data?.id) {
             await clearUserFromLocalStorage();
             return null;
         }
-        localStorage.setItem("user", JSON.stringify(data.user));
-        return data.user;
+        localStorage.setItem("user", JSON.stringify(data));
+        return data;
     } catch (error) {
         console.error("Error fetching session:", error);
         await clearUserFromLocalStorage();
