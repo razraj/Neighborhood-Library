@@ -204,7 +204,9 @@ export function LendingConsole({
                                             </TableCell>
                                             <TableCell>
                                                 {loan.isOverdue ? (
-                                                    <Badge variant="destructive">Overdue</Badge>
+                                                    <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
+                                                        Overdue
+                                                    </Badge>
                                                 ) : (
                                                     <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-200">
                                                         Active

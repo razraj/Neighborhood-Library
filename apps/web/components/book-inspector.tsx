@@ -246,7 +246,9 @@ export function BookInspector({
                                                     </Badge>
                                                 ) : copy.status === "borrowed" ? (
                                                     copy.isOverdue ? (
-                                                        <Badge variant="destructive">Borrowed (Overdue)</Badge>
+                                                        <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
+                                                            Borrowed (Overdue)
+                                                        </Badge>
                                                     ) : (
                                                         <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-200">
                                                             Borrowed

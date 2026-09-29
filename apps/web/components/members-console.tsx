@@ -219,7 +219,7 @@ export function MembersConsole() {
                                                 <TableCell className="text-xs">
                                                     <span
                                                         className={`flex items-center gap-1 font-medium ${
-                                                            loan.isOverdue ? "text-destructive" : ""
+                                                            loan.isOverdue ? "text-destructive" : "text-foreground"
                                                         }`}
                                                     >
                                                         <Calendar className="h-3.5 w-3.5" />
@@ -228,7 +228,7 @@ export function MembersConsole() {
                                                 </TableCell>
                                                 <TableCell>
                                                     {loan.isOverdue ? (
-                                                        <Badge variant="destructive" className="text-xs">
+                                                        <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 text-xs">
                                                             Overdue
                                                         </Badge>
                                                     ) : (
