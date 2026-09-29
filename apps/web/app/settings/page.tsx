@@ -1,10 +1,10 @@
 "use client";
 
-import { useForm } from "@tanstack/react-form-nextjs";
+import { useChangePassword, useCurrentUser, useUpdateProfile } from "@/hooks/use-user-queries";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AuthGuard } from "@/components/auth-guard";
 import { FormFieldError } from "@/components/form-field-error";
-import { useCurrentUser, useUpdateProfile, useChangePassword } from "@/hooks/use-user-queries";
+import { toast } from "@repo/ui/components";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@repo/ui/components/breadcrumb";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/components/card";
@@ -12,7 +12,7 @@ import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { Separator } from "@repo/ui/components/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@repo/ui/components/sidebar";
-import { toast } from "@repo/ui/components";
+import { useForm } from "@tanstack/react-form-nextjs";
 
 function ProfileForm({
     userId,
@@ -21,7 +21,7 @@ function ProfileForm({
 }: {
     userId: string;
     formKey: string;
-    defaultValues: { firstName: string; lastName: string; username: string };
+    defaultValues: { firstName: string; lastName: string; phone: string };
 }) {
     const updateProfile = useUpdateProfile();
 
@@ -80,21 +80,15 @@ function ProfileForm({
                         </Field>
                     )}
                 </form.Field>
-                <form.Field
-                    name="username"
-                    validators={{
-                        onChange: ({ value }) =>
-                            value.trim().length >= 3 ? undefined : "Username must be at least 3 characters",
-                    }}
-                >
+                <form.Field name="phone">
                     {(field) => (
                         <Field>
-                            <FieldLabel htmlFor="username">Username</FieldLabel>
+                            <FieldLabel htmlFor="phone">Phone Number</FieldLabel>
                             <Input
-                                id="username"
+                                id="phone"
                                 value={field.state.value}
                                 onChange={(e) => field.handleChange(e.target.value)}
-                                placeholder="Enter your username"
+                                placeholder="e.g. +1 555-0199"
                             />
                             <FormFieldError errors={field.state.meta.errors} />
                         </Field>
@@ -118,12 +112,12 @@ function ChangePasswordForm({ userId }: { userId: string }) {
     const changePassword = useChangePassword();
 
     const form = useForm({
-        defaultValues: { oldPassword: "", password: "", confirmPassword: "" },
+        defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
         onSubmit: async ({ value }) => {
             try {
                 await changePassword.mutateAsync({
                     userId,
-                    data: { oldPassword: value.oldPassword, password: value.password },
+                    data: { currentPassword: value.currentPassword, newPassword: value.newPassword },
                 });
                 toast.success("Password changed");
                 form.reset();
@@ -142,14 +136,14 @@ function ChangePasswordForm({ userId }: { userId: string }) {
         >
             <FieldGroup>
                 <form.Field
-                    name="oldPassword"
+                    name="currentPassword"
                     validators={{ onChange: ({ value }) => (value ? undefined : "Current password is required") }}
                 >
                     {(field) => (
                         <Field>
-                            <FieldLabel htmlFor="oldPassword">Current Password</FieldLabel>
+                            <FieldLabel htmlFor="currentPassword">Current Password</FieldLabel>
                             <Input
-                                id="oldPassword"
+                                id="currentPassword"
                                 type="password"
                                 value={field.state.value}
                                 onChange={(e) => field.handleChange(e.target.value)}
@@ -160,7 +154,7 @@ function ChangePasswordForm({ userId }: { userId: string }) {
                     )}
                 </form.Field>
                 <form.Field
-                    name="password"
+                    name="newPassword"
                     validators={{ onChange: ({ value }) => (value.length >= 8 ? undefined : "Must be at least 8 characters") }}
                 >
                     {(field) => (
@@ -180,10 +174,10 @@ function ChangePasswordForm({ userId }: { userId: string }) {
                 <form.Field
                     name="confirmPassword"
                     validators={{
-                        onChangeListenTo: ["password"],
+                        onChangeListenTo: ["newPassword"],
                         onChange: ({ value, fieldApi }) => {
-                            const password = fieldApi.form.getFieldValue("password");
-                            if (value && password && value !== password) {
+                            const newPassword = fieldApi.form.getFieldValue("newPassword");
+                            if (value && newPassword && value !== newPassword) {
                                 return "Passwords do not match";
                             }
                             return value ? undefined : "Please confirm your password";
@@ -226,8 +220,8 @@ export default function SettingsPage() {
             <SidebarProvider>
                 <AppSidebar />
                 <SidebarInset>
-                    <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-                        <div className="flex items-center gap-2 px-4">
+                    <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b px-4">
+                        <div className="flex items-center gap-2">
                             <SidebarTrigger className="-ml-1" />
                             <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
                             <Breadcrumb>
@@ -244,7 +238,7 @@ export default function SettingsPage() {
                         <Card>
                             <CardHeader>
                                 <CardTitle>Profile</CardTitle>
-                                <CardDescription>Update your display name and username.</CardDescription>
+                                <CardDescription>Update your member contact information.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 {isLoading ? (
@@ -253,17 +247,17 @@ export default function SettingsPage() {
                                     <div className="flex items-center gap-2">
                                         <p className="text-sm text-muted-foreground">Failed to load profile.</p>
                                         <Button type="button" variant="outline" size="sm" onClick={() => refetch()}>
-                                            Try again
+                                             Try again
                                         </Button>
                                     </div>
                                 ) : (
                                     <ProfileForm
                                         userId={user.id}
-                                        formKey={`${user.id}-${user.updatedAt ?? ""}`}
+                                        formKey={user.id}
                                         defaultValues={{
                                             firstName: user.firstName ?? "",
                                             lastName: user.lastName ?? "",
-                                            username: user.username ?? "",
+                                            phone: user.phone ?? "",
                                         }}
                                     />
                                 )}

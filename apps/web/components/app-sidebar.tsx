@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { NavMain } from "@/components/nav-main";
+import { useCurrentUser } from "@/hooks/use-user-queries";
 import {
     Sidebar,
     SidebarContent,
@@ -13,10 +13,10 @@ import {
     SidebarRail,
 } from "@repo/ui/components/sidebar";
 import { Skeleton } from "@repo/ui/components/skeleton";
-import { LucideIcon, Settings, Settings2, SquareTerminal, FolderKanban } from "lucide-react";
+import { BookOpen, Library, LucideIcon, Settings, Settings2 } from "lucide-react";
+import Link from "next/link";
 import * as React from "react";
 import { NavUser } from "./nav-user";
-import { useCurrentUser } from "@/hooks/use-user-queries";
 
 export interface Data {
     navMain: {
@@ -33,14 +33,9 @@ export interface Data {
 
 const navItems: Data["navMain"] = [
     {
-        title: "Timesheets",
+        title: "Library Console",
         url: "/dashboard",
-        icon: SquareTerminal,
-    },
-    {
-        title: "Projects",
-        url: "/projects",
-        icon: FolderKanban,
+        icon: BookOpen,
     },
     {
         title: "Settings",
@@ -48,7 +43,7 @@ const navItems: Data["navMain"] = [
         icon: Settings2,
         items: [
             {
-                title: "Account",
+                title: "My Account",
                 url: "/settings",
                 icon: Settings,
             },
@@ -59,10 +54,9 @@ const navItems: Data["navMain"] = [
 function displayName(user: {
     firstName?: string | null;
     lastName?: string | null;
-    username?: string;
 }): string {
     const full = [user.firstName, user.lastName].filter(Boolean).join(" ");
-    return full || user.username || "User";
+    return full || "Library Member";
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -72,7 +66,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         ? {
               name: displayName(sessionUser),
               email: sessionUser.email ?? "",
-              avatar: sessionUser.profilePic ?? "",
+              avatar: "",
           }
         : null;
 
@@ -83,12 +77,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
                             <Link href="/dashboard">
-                                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                                    <span className="text-sm font-bold">T</span>
+                                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                                    <Library className="h-4 w-4" />
                                 </div>
                                 <div className="grid flex-1 text-left text-sm leading-tight">
-                                    <span className="truncate font-semibold">TenT</span>
-                                    <span className="truncate text-xs text-muted-foreground">Dashboard</span>
+                                    <span className="truncate font-semibold">Neighborhood Library</span>
+                                    <span className="truncate text-xs text-muted-foreground">Management Console</span>
                                 </div>
                             </Link>
                         </SidebarMenuButton>

@@ -1,16 +1,16 @@
 export const queryKeys = {
-    user: {
-        me: ["user", "me"] as const,
+    auth: {
+        me: ["auth", "me"] as const,
     },
-    weeks: {
-        all: ["weeks"] as const,
-        list: (page: number, pageSize: number, scope?: string, projectId?: string) =>
-            [...queryKeys.weeks.all, "list", page, pageSize, scope ?? "default", projectId ?? "all"] as const,
-        detail: (weekStart: string, scope?: string, projectId?: string) =>
-            [...queryKeys.weeks.all, "detail", weekStart, scope ?? "default", projectId ?? "all"] as const,
+    books: {
+        all: ["books"] as const,
+        status: (bookId: string) => ["books", "status", bookId] as const,
     },
-    projects: {
-        all: ["projects"] as const,
-        detail: (id: string) => [...queryKeys.projects.all, id] as const,
+    loans: {
+        all: ["loans"] as const,
+        user: (userId: string) => ["loans", "user", userId] as const,
+    },
+    members: {
+        all: ["members"] as const,
     },
 } as const;
